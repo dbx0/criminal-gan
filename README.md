@@ -2,19 +2,41 @@
 
 A GAN created to generate faces based on records of criminals
 
+## Requirements
+* Linux or Mac
+* Python 3.6
+* Pip
+* imagemagick
+
+## Datasets
+
+In this case we are going to use the following datasets:
+
 ***NIST Special Database 18***
 
 *NIST Mugshot Identification Database (MID)*
 
 *https://www.nist.gov/srd/nist-special-database-18*
 
-## Requirements
-* Linux or Mac
-* Python 3.6
-* Pip
+***AT&T Laboratories Cambridge hosted in conjunction with Cambridge University Computer Laboratory***
 
-## Instalation
-Get into the project folder
+*The Database of Faces*
+
+*http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html*
+
+***BioID Face Database - FaceDB***
+
+*https://www.bioid.com/About/BioID-Face-Database*
+
+***FGnet - IST-2000-26434 Face and Gesture Recognition Working group***
+
+*Head Pose Image Database*
+
+*http://www-prima.inrialpes.fr/FGnet/html/home.html*
+
+
+## Project instalation
+Clone this project and run the following
 
 Setting up the virtual env
 ```bash
@@ -28,20 +50,57 @@ Installing dependencies
 pip install -r requirements.txt
 ```
 
-Downloading dataset 
+## Setting up datasets
+
+Download the datasets
 ```bash
+cd data/
 wget https://s3.amazonaws.com/nist-srd/SD18/sd18.zip
+wget http://www.cl.cam.ac.uk/Research/DTG/attarchive/pub/data/att_faces.zip
+wget ftp://ftp.uni-erlangen.de/pub/facedb/BioID-FaceDatabase-V1.2.zip
+wget http://www-prima.inrialpes.fr/perso/Gourier/Faces/HeadPoseImageDatabase.tar.gz
+```
+
+Create a folder to contain all the dataset
+```bash
+mkdir all_images
+```
+
+#### Unzip the folders, convert if necessary and move to a single folder
+
+
+**NIST Special Database 18**
+```bash
 unzip sd18.zip
+mv sd18/*/*/*_F.png all_images/
+rm -rf sd18
 ```
 
-Move all the images with frontal face to somewhere inside the data folder
+**BioID Face Database - FaceDB**
 ```bash
-mv sd18/*/*/*_F.png data/front/
+unzip BioID-FaceDatabase-V1.2.zip -d bioid/
+convert bioid/*.pgm all_images/bioid_%03d.png
+rm -rf bioid/
 ```
 
-Install in your system the package imagemagick and use mogrify to resize all images
+**AT&T - The Database of Faces**
 ```bash
-mogrify -resize 64x64! -quality 100 -path resized/ *.png
+unzip att_faces.zip -d att/
+convert att/*/*.pgm all_images/att_%03d.png
+rm -rf att/
+```
+
+**FGnet - Head Pose Image Database**
+```bash
+tar xvz -f HeadPoseImageDatabase.tar.gz Front/
+convert Front/*.jpg all_images/att_%03d.png
+rm -rf Front/
+```
+
+```bash
+mkdir resized/
+mogrify -resize 64x64! -quality 100 -path resized/ all_images/*
+rm -rf all_images/
 ```
 
 ## Start 
@@ -49,17 +108,3 @@ mogrify -resize 64x64! -quality 100 -path resized/ *.png
 ```bash
 python gan.py
 ```
-
-
-## Example
-
-**Input with real images**
-
-
-<img src="https://i.imgur.com/BrtvDmt.png" width="500">
-
-**Output generated with 25 epochs**
-
-
-<img src="https://i.imgur.com/vbOhdSo.png" width="500">
-
