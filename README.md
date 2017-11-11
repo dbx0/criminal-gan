@@ -99,12 +99,28 @@ rm -rf Front/
 
 ```bash
 mkdir resized/
-mogrify -resize 64x64! -quality 100 -path resized/ all_images/*
+mogrify -resize 64x64! -quality 100 -path resized/ all_images/* -type Grayscale
 rm -rf all_images/
 ```
 
 ## Start 
 
 ```bash
-python gan.py
+$ python gan.py
+
+
+	+-+-+-+-+-+-+-+-+ +-+-+-+
+	|C|R|I|M|I|N|A|L| |G|A|N|
+	+-+-+-+-+-+-+-+-+ +-+-+-+
+	Created by Davidson Mizael
+	
+
+
+# Starting...
+# Loading data...
+# Starting generator and descriminator...
+# Starting epochs (15)...
+# Progress: [0/15][38/38] Loss_D: 1.5640 Loss_G: 0.0004
+# Progress: [1/15][38/38] Loss_D: 1.4570 Loss_G: 0.0004
+...
 ```
