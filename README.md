@@ -52,6 +52,13 @@ pip install -r requirements.txt
 
 ## Setting up datasets
 
+Use the following script *or* follow all the commands below
+```bash
+cd util
+sh install_dataset.sh
+```
+
+### OR 
 Download the datasets
 ```bash
 cd data/
@@ -66,7 +73,7 @@ Create a folder to contain all the dataset
 mkdir all_images
 ```
 
-#### Unzip the folders, convert if necessary and move to a single folder
+### Unzip the folders, convert if necessary and move to a single folder
 
 
 **NIST Special Database 18**

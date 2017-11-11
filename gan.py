@@ -1,4 +1,3 @@
-#!/usr/bin/python
 from __future__ import print_function
 import torch
 import torch.nn as nn
@@ -10,8 +9,8 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 from torch.autograd import Variable
 
-from descriminator import D
-from generator import G
+from core.descriminator import D
+from core.generator import G
 
 #takes as parameter a neural network and defines its weights
 def weights_init(m):
@@ -40,7 +39,6 @@ imageSize = 64
 transform = transforms.Compose([transforms.Scale(imageSize),transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),])
 
 print("# Loading data...")
-#dataset = dset.ImageFolder(root = './data', download = True, transform = transform)
 dataset = dset.ImageFolder(root = './data', transform = transform)
 dataloader = torch.utils.data.DataLoader(dataset, batch_size = batchSize, shuffle = True, num_workers = 2)
 
@@ -57,7 +55,7 @@ criterion = nn.BCELoss()
 optimizerD = optim.Adam(netD.parameters(), lr = 0.0002, betas = (0.5, 0.999))
 optimizerG = optim.Adam(netG.parameters(), lr = 0.0002, betas = (0.5, 0.999))
 
-epochs = 150
+epochs = 15
 print("# Starting epochs (%d)..." % epochs)
 for epoch in range(epochs):
     for i, data in enumerate(dataloader, 0):
@@ -94,9 +92,10 @@ for epoch in range(epochs):
         errG.backward()
         optimizerG.step()
 
-        if i == len(dataloader):
-            print("# Progress: [%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f" % (epoch, epochs, i, len(dataloader), errD.data[0], errG.data[0]))
+        if i == (len(dataloader) - 1):
+            print("# Progress: [%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f" % (epoch, epochs, i, (len(dataloader) - 1), errD.data[0], errG.data[0]))
             vutils.save_image(real, "%s/real_samples.png" % "./results", normalize = True)
+            fake = netG(noise)
             vutils.save_image(fake.data, "%s/fake_samples_epoch_%03d.png" % ("./results", epoch), normalize = True)
 
 print ("# Finished.")
