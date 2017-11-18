@@ -9,6 +9,8 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 from torch.autograd import Variable
 
+import argparse
+
 from core.descriminator import D
 from core.generator import G
 
@@ -31,6 +33,14 @@ print("""\n
 print("\n")
 print("# Starting...")
 
+parser = argparse.ArgumentParser(description='Criminal GAN.')
+parser.add_argument('-c', action='store_true', help='Enable CUDA')
+args = parser.parse_args()
+isCuda = args.c
+
+print("# Using Cuda...") if isCuda else None
+
+
 #sets the size of the image (64x64) and the batch (size of the matrix)
 batchSize = 64
 imageSize = 64
@@ -44,10 +54,10 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size = batchSize, shuffl
 
 
 print("# Starting generator and descriminator...")
-netG = G()
+netG = G().cuda() if isCuda else G()
 netG.apply(weights_init)
 
-netD = D()
+netD = D().cuda() if isCuda else D()
 netD.apply(weights_init)
 
 #training the DCGANs
@@ -66,14 +76,18 @@ for epoch in range(epochs):
         #trains the discriminator with a real image
         real, _ = data
         input = Variable(real)
-        target = Variable(torch.ones(input.size()[0]))
+        input.cuda() if isCuda else None
+        target = Variable(torch.ones(input.size()[0])).cuda()
+        target.cuda() if isCuda else None
         output = netD(input)
         errD_real = criterion(output, target)
         
         #trains the discriminator with a fake image
         noise = Variable(torch.randn(input.size()[0], 100, 1, 1))
+        noise.cuda() if isCuda else None
         fake = netG(noise)
         target = Variable(torch.zeros(input.size()[0]))
+        target.cuda() if isCuda else None
         ouput = netD(fake.detach())
         errD_fake = criterion(output, target)
         
@@ -85,6 +99,7 @@ for epoch in range(epochs):
         #updates the weights of the generator nn
         netG.zero_grad()
         target = Variable(torch.ones(input.size()[0]))
+        target.cuda() if isCuda else None
         output = netD(fake)
         errG  = criterion(output, target)
         
