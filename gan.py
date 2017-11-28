@@ -9,8 +9,6 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 from torch.autograd import Variable
 
-import argparse
-
 from core.descriminator import D
 from core.generator import G
 
@@ -23,6 +21,7 @@ def weights_init(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
+
 print("""\n
 \t+-+-+-+-+-+-+-+-+ +-+-+-+
 \t|C|R|I|M|I|N|A|L| |G|A|N|
@@ -33,14 +32,6 @@ print("""\n
 print("\n")
 print("# Starting...")
 
-parser = argparse.ArgumentParser(description='Criminal GAN.')
-parser.add_argument('-c', action='store_true', help='Enable CUDA')
-args = parser.parse_args()
-isCuda = args.c
-
-print("# Using Cuda...") if isCuda else None
-
-
 #sets the size of the image (64x64) and the batch (size of the matrix)
 batchSize = 64
 imageSize = 64
@@ -49,23 +40,27 @@ imageSize = 64
 transform = transforms.Compose([transforms.Scale(imageSize),transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),])
 
 print("# Loading data...")
-dataset = dset.ImageFolder(root = './data', transform = transform)
-dataloader = torch.utils.data.DataLoader(dataset, batch_size = batchSize, shuffle = True, num_workers = 2)
+dataset = dset.ImageFolder(root = './data/', transform = transform)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size = batchSize, shuffle = True)
 
 
 print("# Starting generator and descriminator...")
-netG = G().cuda() if isCuda else G()
+netG = G()
 netG.apply(weights_init)
 
-netD = D().cuda() if isCuda else D()
+netD = D()
 netD.apply(weights_init)
+
+if torch.cuda.is_available():
+    netG.cuda()
+    netD.cuda()
 
 #training the DCGANs
 criterion = nn.BCELoss()
 optimizerD = optim.Adam(netD.parameters(), lr = 0.0002, betas = (0.5, 0.999))
 optimizerG = optim.Adam(netG.parameters(), lr = 0.0002, betas = (0.5, 0.999))
 
-epochs = 15
+epochs = 250
 print("# Starting epochs (%d)..." % epochs)
 for epoch in range(epochs):
     for i, data in enumerate(dataloader, 0):
@@ -75,42 +70,56 @@ for epoch in range(epochs):
         
         #trains the discriminator with a real image
         real, _ = data
-        input = Variable(real)
-        input.cuda() if isCuda else None
-        target = Variable(torch.ones(input.size()[0])).cuda()
-        target.cuda() if isCuda else None
-        output = netD(input)
+        if torch.cuda.is_available():
+            inputs = Variable(real.cuda()).cuda()
+            target = Variable(torch.ones(inputs.size()[0]).cuda()).cuda()
+        else:
+            inputs = Variable(real)
+            target = Variable(torch.ones(inputs.size()[0]))
+
+        output = netD(inputs)
         errD_real = criterion(output, target)
+        errD_real.backward()
         
         #trains the discriminator with a fake image
-        noise = Variable(torch.randn(input.size()[0], 100, 1, 1))
-        noise.cuda() if isCuda else None
-        fake = netG(noise)
-        target = Variable(torch.zeros(input.size()[0]))
-        target.cuda() if isCuda else None
-        ouput = netD(fake.detach())
-        errD_fake = criterion(output, target)
+
+        if torch.cuda.is_available():
+            D_noise = Variable(torch.randn(inputs.size()[0], 100, 1, 1)).cuda()
+            target = Variable(torch.zeros(inputs.size()[0])).cuda()
+        else:
+            D_noise = Variable(torch.randn(inputs.size()[0], 100, 1, 1))
+            target = Variable(torch.zeros(inputs.size()[0]))    
+        
+        D_fake = netG(D_noise)
+        D_fake_ouput = netD(D_fake.detach())
+        errD_fake = criterion(D_fake_ouput, target)
+        errD_fake.backward()
         
         #backpropagating the total error
-        errD = errD_real + errD_fake
-        errD.backward()
+        #errD = errD_real + errD_fake
+        #errD.backward()
         optimizerD.step()
         
         #updates the weights of the generator nn
         netG.zero_grad()
-        target = Variable(torch.ones(input.size()[0]))
-        target.cuda() if isCuda else None
-        output = netD(fake)
-        errG  = criterion(output, target)
+        if torch.cuda.is_available():
+            G_noise = Variable(torch.randn(inputs.size()[0], 100, 1, 1).cuda()).cuda()
+            target = Variable(torch.ones(inputs.size()[0]).cuda()).cuda()
+        else:
+            G_noise = Variable(torch.randn(inputs.size()[0], 100, 1, 1))
+            target = Variable(torch.ones(inputs.size()[0]))
+        
+        fake = netG(G_noise)
+        G_output = netD(fake)
+        errG  = criterion(G_output, target)
         
         #backpropagating the error
         errG.backward()
         optimizerG.step()
 
         if i == (len(dataloader) - 1):
-            print("# Progress: [%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f" % (epoch, epochs, i, (len(dataloader) - 1), errD.data[0], errG.data[0]))
-            vutils.save_image(real, "%s/real_samples.png" % "./results", normalize = True)
-            fake = netG(noise)
-            vutils.save_image(fake.data, "%s/fake_samples_epoch_%03d.png" % ("./results", epoch), normalize = True)
+            print("# Progress: [%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f" % (epoch, epochs, i, (len(dataloader) - 1), errD_real.data[0], errG.data[0]))
+            vutils.save_image(real, "%s/real_samples.png" % "./results/", normalize = True)
+            vutils.save_image(fake.data, "%s/fake_samples_epoch_%03d.png" % ("./results/", epoch), normalize = True)
 
 print ("# Finished.")
